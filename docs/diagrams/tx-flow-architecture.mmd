@@ -1,0 +1,30 @@
+flowchart LR
+    subgraph Client["客户端"]
+        U["用户 / MetaMask"]
+        FE["前端 Next.js"]
+    end
+
+    subgraph Server["应用后端"]
+        BE["Go API<br/>quote/sponsor/userop"]
+    end
+
+    subgraph AA["4337 账户抽象层"]
+        B["Bundler (Alchemy)"]
+        EP["EntryPoint"]
+        A["EIP-7702 DelegateAccount<br/>(挂载到EOA)"]
+        PM["USDT Paymaster"]
+    end
+
+    subgraph Token["代币层"]
+        T["MockUSDT (ERC20 + Permit)"]
+    end
+
+    U --> FE
+    FE --> BE
+    BE --> B
+    B --> EP
+    EP --> A
+    EP --> PM
+    A --> T
+    PM --> T
+    EP --> B

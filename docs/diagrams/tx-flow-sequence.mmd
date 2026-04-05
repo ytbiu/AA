@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant U as 用户(MetaMask/EOA)
+    participant FE as 前端(Next.js)
+    participant BE as 后端(Go)
+    participant B as Bundler(Alchemy)
+    participant EP as EntryPoint
+    participant A as 7702账户逻辑(DelegateAccount)
+    participant PM as Paymaster
+    participant T as MockUSDT
+
+    U->>FE: 连接钱包 + 签Permit + 签UserOp
+    FE->>BE: 请求quote/sponsor并提交userOp
+    BE->>B: eth_sendUserOperation(UserOp, EntryPoint)
+
+    B->>EP: 上链handleOps(外层tx.from=Bundler)
+    EP->>A: validateUserOp(userOpHash, signature)
+    A-->>EP: 验签结果
+
+    EP->>PM: validatePaymasterUserOp(...)
+    PM-->>EP: context + validationData
+
+    EP->>A: 执行userOp.callData
+    A->>T: transfer(收款地址, 金额)
+
+    EP->>PM: postOp(actualGasCost, context)
+    PM->>T: permit(user -> paymaster)
+    PM->>T: transferFrom(user -> paymaster, gas token)
+
+    EP->>B: 给beneficiary结算BNB

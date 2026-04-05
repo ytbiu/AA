@@ -1,0 +1,6 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - heading "Upgrade to EIP-7702" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Please connect your wallet first
+    - button "Connect MetaMask" [ref=e6]
+  - alert [ref=e7]
