@@ -27,7 +27,9 @@
       "Bash(pkill -f \"next dev\")",
       "Bash(./node_modules/.bin/tsc:*)",
       "Bash(nohup npx:*)",
-      "Bash(curl -s http://localhost:8080/healthz)"
+      "Bash(curl -s http://localhost:8080/healthz)",
+      "Bash(forge script:*)",
+      "Bash(curl -s http://localhost:8080/health)"
     ]
   }
 }
