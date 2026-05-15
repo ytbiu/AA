@@ -40,6 +40,18 @@ func main() {
 
 	r := gin.Default()
 
+	// CORS middleware
+	r.Use(func(c *gin.Context) {
+		c.Header("Access-Control-Allow-Origin", "*")
+		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	})
+
 	r.GET("/api/user-status/:address", handlers.GetUserStatus)
 	r.GET("/api/faucet-info", handlers.GetFaucetInfo)
 	r.POST("/api/authorize-7702", handlers.Authorize7702)
