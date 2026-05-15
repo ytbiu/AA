@@ -68,7 +68,7 @@ contract USDTPaymasterTest is Test {
         mockRouter.setPrice(wbnbAddress, address(usdt), 1 ether, 600 * 1 ether);
 
         // Deploy PriceOracle
-        oracle = new PriceOracle(address(mockRouter), address(usdt));
+        oracle = new PriceOracle(address(mockRouter), wbnbAddress, address(usdt));
 
         // Deploy USDTPaymaster Implementation
         implementation = new USDTPaymaster();

@@ -14,9 +14,9 @@ contract PriceOracle is Ownable, IPriceOracle {
     address public immutable WBNB;
     address public immutable USDT;
 
-    constructor(address _router, address _usdt) Ownable(msg.sender) {
+    constructor(address _router, address _wbnb, address _usdt) Ownable(msg.sender) {
         router = _router;
-        WBNB = IPancakeRouter(_router).WBNB();
+        WBNB = _wbnb;
         USDT = _usdt;
     }
 

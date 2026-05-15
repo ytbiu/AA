@@ -48,8 +48,9 @@ contract Simple7702AccountTest is Test {
         user = address(0x2);
 
         usdt = new MockUSDT();
-        MockPancakeRouter pancakeRouter = new MockPancakeRouter(0xbB4Cdb9cbD36b01BD1cBAebF2de08D91734232b7, address(usdt));
-        oracle = new PriceOracle(address(pancakeRouter), address(usdt));
+        address wbnb = 0xae13d989dAC2F0DeBFF9dcA3EB5e0B1fD735F2D7;
+        MockPancakeRouter pancakeRouter = new MockPancakeRouter(wbnb, address(usdt));
+        oracle = new PriceOracle(address(pancakeRouter), wbnb, address(usdt));
 
         // Deploy Paymaster
         USDTPaymaster paymasterImpl = new USDTPaymaster();

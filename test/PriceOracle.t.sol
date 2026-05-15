@@ -38,9 +38,10 @@ contract PriceOracleTest is Test {
         user = address(0x1);
 
         usdt = new MockUSDT();
-        // 使用 WBNB 的标准地址 (BSC)
-        pancakeRouter = new MockPancakeRouter(0xbB4Cdb9cbD36b01BD1cBAebF2de08D91734232b7, address(usdt));
-        oracle = new PriceOracle(address(pancakeRouter), address(usdt));
+        // BSC 测试网 WBNB 地址
+        address wbnb = 0xae13d989dAC2F0DeBFF9dcA3EB5e0B1fD735F2D7;
+        pancakeRouter = new MockPancakeRouter(wbnb, address(usdt));
+        oracle = new PriceOracle(address(pancakeRouter), wbnb, address(usdt));
     }
 
     function test_RouterSetCorrectly() public view {
@@ -67,7 +68,7 @@ contract PriceOracleTest is Test {
     }
 
     function test_WBNBAddressSetCorrectly() public view {
-        assertEq(oracle.WBNB(), 0xbB4Cdb9cbD36b01BD1cBAebF2de08D91734232b7);
+        assertEq(oracle.WBNB(), 0xae13d989dAC2F0DeBFF9dcA3EB5e0B1fD735F2D7);
     }
 
     function test_GetBNBPriceInUSDT() public view {
