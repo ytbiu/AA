@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -50,7 +51,7 @@ func (h *Handlers) Authorize7702(c *gin.Context) {
 	r := new(big.Int).SetBytes(common.Hex2Bytes(strings.TrimPrefix(req.R, "0x")))
 	s := new(big.Int).SetBytes(common.Hex2Bytes(strings.TrimPrefix(req.S, "0x")))
 
-	tx, err := h.send7702SetCodeTransaction(relayer, userAddr, implAddr, req.ChainID, req.Nonce, req.V, r, s)
+	tx, err := h.send7702SetCodeTransaction(relayer, implAddr, req.ChainID, req.Nonce, req.V, r, s)
 	if err != nil {
 		respondInternalError(c, "setcode_tx_failed", err.Error())
 		return
@@ -110,7 +111,7 @@ func (h *Handlers) Clear7702(c *gin.Context) {
 	r := new(big.Int).SetBytes(common.Hex2Bytes(strings.TrimPrefix(req.R, "0x")))
 	s := new(big.Int).SetBytes(common.Hex2Bytes(strings.TrimPrefix(req.S, "0x")))
 
-	tx, err := h.send7702SetCodeTransaction(relayer, userAddr, emptyAddr, req.ChainID, req.Nonce, req.V, r, s)
+	tx, err := h.send7702SetCodeTransaction(relayer, emptyAddr, req.ChainID, req.Nonce, req.V, r, s)
 	if err != nil {
 		respondInternalError(c, "setcode_tx_failed", err.Error())
 		return
@@ -179,14 +180,13 @@ func recoverSignerFrom7702Auth(hash common.Hash, v uint8, r, s *big.Int) (common
 
 func (h *Handlers) send7702SetCodeTransaction(
 	relayer *relayer.Relayer,
-	userAddr common.Address,
 	impl common.Address,
 	chainID uint64,
 	nonce uint64,
 	v uint8,
 	r, s *big.Int,
 ) (*types.Transaction, error) {
-	relayerNonce, err := h.ethClient.GetEthClient().NonceAt(nil, relayer.Address, nil)
+	relayerNonce, err := h.ethClient.GetEthClient().NonceAt(context.Background(), relayer.Address, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get relayer nonce: %v", err)
 	}
@@ -217,7 +217,7 @@ func (h *Handlers) send7702SetCodeTransaction(
 		GasTipCap:  uint256.MustFromBig(gasPrice),
 		GasFeeCap:  uint256.MustFromBig(gasPrice),
 		Gas:        100000,
-		To:         userAddr,
+		To:         relayer.Address, // 发送到 relayer 自己，避免用户变成 EIP-7702 后空调用失败
 		Value:      new(uint256.Int),
 		Data:       nil,
 		AccessList: nil,
@@ -230,7 +230,7 @@ func (h *Handlers) send7702SetCodeTransaction(
 		return nil, fmt.Errorf("failed to sign transaction: %v", err)
 	}
 
-	err = h.ethClient.GetEthClient().SendTransaction(nil, signedTx)
+	err = h.ethClient.GetEthClient().SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send transaction: %v", err)
 	}

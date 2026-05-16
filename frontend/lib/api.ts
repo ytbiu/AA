@@ -46,7 +46,7 @@ export async function getFaucetInfo(): Promise<FaucetInfo> {
   return res.json()
 }
 
-// EIP-7702 授权 API - 新格式
+// EIP-7702 授权 API
 export async function authorize7702(
   userAddress: string,
   chainId: number,
@@ -65,7 +65,7 @@ export async function authorize7702(
       v: v,
       r: r,
       s: s,
-      signature: '', // 可选，后端会从 v/r/s 验证
+      signature: '',
     }),
   })
   if (!res.ok) {
