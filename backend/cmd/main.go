@@ -55,7 +55,6 @@ func main() {
 
 	r.GET("/api/user-status/:address", handlers.GetUserStatus)
 	r.GET("/api/faucet-info", handlers.GetFaucetInfo)
-	r.GET("/api/fee-estimate", handlers.GetFeeEstimate)
 	r.POST("/api/faucet/:address", handlers.ClaimFaucet)
 	r.POST("/api/authorize-7702", handlers.Authorize7702)
 	r.POST("/api/clear-7702", handlers.Clear7702)
