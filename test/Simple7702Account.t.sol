@@ -60,17 +60,16 @@ contract Simple7702AccountTest is Test {
         );
         paymaster = USDTPaymaster(address(paymasterProxy));
 
-        // Deploy Simple7702Account
+        // Deploy Simple7702Account - no longer needs paymaster address
         Simple7702Account accountImpl = new Simple7702Account();
         ERC1967Proxy accountProxy = new ERC1967Proxy(
             address(accountImpl),
-            abi.encodeCall(Simple7702Account.initialize, (address(paymaster), owner))
+            abi.encodeCall(Simple7702Account.initialize, (owner))
         );
         account = Simple7702Account(address(accountProxy));
     }
 
     function test_InitializeCorrectly() public view {
-        assertEq(address(account.paymaster()), address(paymaster));
         assertEq(account.owner(), owner);
     }
 
@@ -88,9 +87,6 @@ contract Simple7702AccountTest is Test {
 
     function test_ValidSignature_Functionality() public {
         // Create a simple test to verify the isValidSignature function works
-        // We use a signature that recovers to a known address
-        // The signature for "test" with private key 0x4c0883a69102937d6231471b5dbb6204fe512961296129612961296129612961
-        // Signer: 0x7E5F455206A39E0a3d37Dd103a76C459b101B143
         bytes32 hash = keccak256("test").toEthSignedMessageHash();
 
         // Signature components from a known valid signature
@@ -105,25 +101,14 @@ contract Simple7702AccountTest is Test {
         assertEq(bytes32(result), 0xffffffff00000000000000000000000000000000000000000000000000000000);
     }
 
-    function test_OwnerCanSetPaymaster() public {
-        vm.prank(owner);
-        account.setPaymaster(user);
-        assertEq(address(account.paymaster()), user);
-    }
-
-    function test_NonOwnerCannotSetPaymaster() public {
-        vm.prank(user);
-        vm.expectRevert();
-        account.setPaymaster(user);
-    }
-
-    function test_OnlyPaymasterCanExecuteBatch() public {
+    function test_ExecuteBatchAnyone() public {
+        // Now anyone can call executeBatch (no onlyPaymaster modifier)
         IUSDTPaymaster.Call[] memory calls = new IUSDTPaymaster.Call[](1);
         calls[0] = IUSDTPaymaster.Call(address(usdt), abi.encodeWithSignature("faucet()"));
 
         vm.prank(user);
-        vm.expectRevert("Simple7702Account: only paymaster");
         account.executeBatch(calls);
+        // Should succeed without revert
     }
 
     function test_UUPSUpgradeability() public view {
@@ -132,9 +117,8 @@ contract Simple7702AccountTest is Test {
 
     function test_ImplementationDisabled() public {
         // Verify that initialize() cannot be called on the implementation directly
-        // Create a fresh implementation instance and try to call initialize
         Simple7702Account freshImpl = new Simple7702Account();
         vm.expectRevert();
-        freshImpl.initialize(address(paymaster), owner);
+        freshImpl.initialize(owner);
     }
 }

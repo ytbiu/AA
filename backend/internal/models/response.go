@@ -30,6 +30,12 @@ type FaucetInfoResponse struct {
 	UsdtAddress  string `json:"usdt_address"`
 }
 
+type FaucetClaimResponse struct {
+	TxHash string `json:"tx_hash"`
+	Amount string `json:"amount"`
+	Status string `json:"status"`
+}
+
 type RelayerStatusResponse struct {
 	Relayers []RelayerInfo `json:"relayers"`
 }
@@ -37,6 +43,7 @@ type RelayerStatusResponse struct {
 type RelayerInfo struct {
 	Address   string `json:"address"`
 	PendingTx int    `json:"pending_tx"`
+	IsActive  bool   `json:"is_active"`
 }
 
 type ErrorResponse struct {

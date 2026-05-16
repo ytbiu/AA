@@ -35,8 +35,9 @@ func main() {
 
 	paymaster := contract.NewPaymaster(cfg.ContractPaymaster, ethClient.GetEthClient())
 	usdt := contract.NewUSDT(cfg.ContractUSDT, ethClient.GetEthClient())
+	account := contract.NewAccountContract(cfg.Contract7702Account, ethClient.GetEthClient())
 
-	handlers := api.NewHandlers(relayerPool, paymaster, usdt)
+	handlers := api.NewHandlers(relayerPool, paymaster, usdt, account, ethClient)
 
 	r := gin.Default()
 
@@ -54,6 +55,7 @@ func main() {
 
 	r.GET("/api/user-status/:address", handlers.GetUserStatus)
 	r.GET("/api/faucet-info", handlers.GetFaucetInfo)
+	r.POST("/api/faucet/:address", handlers.ClaimFaucet)
 	r.POST("/api/authorize-7702", handlers.Authorize7702)
 	r.POST("/api/clear-7702", handlers.Clear7702)
 	r.POST("/api/transfer-usdt", handlers.TransferUSDT)

@@ -36,10 +36,11 @@ contract DeployScript is Script {
         console.log("USDTPaymaster:", address(paymaster));
 
         // 4. 部署 Simple7702Account (UUPS Proxy)
+        // EIP-7702 只绑定代码，不绑定存储，所以不再存储 paymaster 地址
         Simple7702Account accountImpl = new Simple7702Account();
         ERC1967Proxy accountProxy = new ERC1967Proxy(
             address(accountImpl),
-            abi.encodeCall(Simple7702Account.initialize, (address(paymaster), deployer))
+            abi.encodeCall(Simple7702Account.initialize, (deployer))
         );
         Simple7702Account account = Simple7702Account(address(accountProxy));
         console.log("Simple7702Account:", address(account));

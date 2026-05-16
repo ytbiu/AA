@@ -46,18 +46,26 @@ export async function getFaucetInfo(): Promise<FaucetInfo> {
   return res.json()
 }
 
+// EIP-7702 授权 API - 新格式
 export async function authorize7702(
   userAddress: string,
-  authorizationData: string,
-  signature: string
+  chainId: number,
+  nonce: number,
+  v: number,
+  r: string,
+  s: string
 ): Promise<Authorize7702Response> {
   const res = await fetch(`${BACKEND_URL}/api/authorize-7702`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       user_address: userAddress,
-      authorization_data: authorizationData,
-      signature: signature,
+      chain_id: chainId,
+      nonce: nonce,
+      v: v,
+      r: r,
+      s: s,
+      signature: '', // 可选，后端会从 v/r/s 验证
     }),
   })
   if (!res.ok) {
@@ -66,18 +74,26 @@ export async function authorize7702(
   return res.json()
 }
 
+// 清除 7702 授权 API - 新格式
 export async function clear7702(
   userAddress: string,
-  authorizationData: string,
-  signature: string
+  chainId: number,
+  nonce: number,
+  v: number,
+  r: string,
+  s: string
 ): Promise<{ tx_hash: string; status: string }> {
   const res = await fetch(`${BACKEND_URL}/api/clear-7702`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       user_address: userAddress,
-      authorization_data: authorizationData,
-      signature: signature,
+      chain_id: chainId,
+      nonce: nonce,
+      v: v,
+      r: r,
+      s: s,
+      signature: '',
     }),
   })
   if (!res.ok) {

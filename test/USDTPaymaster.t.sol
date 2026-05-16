@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "../src/MockUSDT.sol";
 import "../src/PriceOracle.sol";
 import "../src/USDTPaymaster.sol";
+import "../src/base/PaymasterBase.sol";
 
 contract MockPancakeRouter is IPancakeRouter {
     address public wbnb;
@@ -133,7 +134,7 @@ contract USDTPaymasterTest is Test {
         bytes memory signature = new bytes(65);
 
         vm.prank(user);
-        vm.expectRevert(USDTPaymaster.NotRelayer.selector);
+        vm.expectRevert(PaymasterBase.NotRelayer.selector);
         paymaster.executeBatch(userOp, signature);
     }
 

@@ -1,1 +1,15 @@
 .env
+.env.local
+*.log
+node_modules/
+.next/
+out/
+cache/
+abi/
+bin/
+memory/
+.playwright-mcp/
+debug*.js
+test-*.js
+*.png
+.claude/

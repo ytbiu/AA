@@ -10,7 +10,24 @@
       "Bash(anvil --help)",
       "Bash(anvil -d --block-time 1)",
       "Bash(anvil)",
-      "Bash(pkill anvil *)"
+      "Bash(pkill anvil *)",
+      "Bash(cast code *)",
+      "mcp__icm__icm_memory_recall",
+      "Bash(node_modules/.bin/next dev *)",
+      "Bash(node -e \"console.log\\('Testing if we can run node commands'\\);\")",
+      "Bash(node -e \"console.log\\('Testing if node works'\\)\")",
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(./node_modules/.bin/next build *)",
+      "Bash(node node_modules/.bin/next build)",
+      "Bash(/usr/local/bin/npm run *)",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_navigate",
+      "Bash(~/.claude/skills/gstack/browse/dist/browse navigate *)",
+      "Bash(abigen *)",
+      "Bash(lsof -ti:3000)",
+      "Bash(xargs kill *)",
+      "Bash(node *)",
+      "mcp__playwright__browser_fill_form"
     ]
   }
 }

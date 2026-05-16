@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { getFaucetInfo } from '@/lib/api';
-import { CONTRACTS } from '@/lib/contracts';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
 export default function FaucetPage() {
   const [faucetInfo, setFaucetInfo] = useState<any>(null);
@@ -33,12 +34,9 @@ export default function FaucetPage() {
     setResult(null);
 
     try {
-      // Faucet requires user to call contract directly (need BNB for gas)
-      // Implementation would go here using the smart wallet infrastructure
-      const response = await fetch('/api/faucet', {
+      const response = await fetch(`${BACKEND_URL}/api/faucet/${address}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address }),
       });
 
       const data = await response.json();

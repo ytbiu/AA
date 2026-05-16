@@ -10,7 +10,6 @@ interface EIP1271 {
 }
 
 contract Simple7702Account is Initializable, OwnableUpgradeable, UUPSUpgradeable, EIP1271 {
-    IUSDTPaymaster public paymaster;
     uint256 private constant MAX_BATCH_SIZE = 5;
 
     event BatchExecuted(address caller, uint256 callCount);
@@ -20,17 +19,14 @@ contract Simple7702Account is Initializable, OwnableUpgradeable, UUPSUpgradeable
         _disableInitializers();
     }
 
-    function initialize(address _paymaster, address _owner) public initializer {
+    function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
-        paymaster = IUSDTPaymaster(_paymaster);
     }
 
-    modifier onlyPaymaster() {
-        require(msg.sender == address(paymaster), "Simple7702Account: only paymaster");
-        _;
-    }
-
-    function executeBatch(IUSDTPaymaster.Call[] calldata calls) external onlyPaymaster {
+    // EIP-7702 只绑定代码，不绑定存储，所以不再存储 paymaster 地址
+    // executeBatch 现在不限制调用者，任何人都可以调用
+    // 但 Paymaster 会验证签名，所以只有用户自己签名才能通过
+    function executeBatch(IUSDTPaymaster.Call[] calldata calls) external {
         require(calls.length <= MAX_BATCH_SIZE, "Simple7702Account: batch too large");
 
         for (uint256 i = 0; i < calls.length; i++) {
@@ -64,10 +60,6 @@ contract Simple7702Account is Initializable, OwnableUpgradeable, UUPSUpgradeable
             return ecrecover(ethSignedHash, v, r, s);
         }
         return address(0);
-    }
-
-    function setPaymaster(address _paymaster) external onlyOwner {
-        paymaster = IUSDTPaymaster(_paymaster);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
