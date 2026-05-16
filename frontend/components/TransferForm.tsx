@@ -5,9 +5,10 @@ import { useState } from 'react';
 interface TransferFormProps {
   onTransfer: (to: string, amount: string) => Promise<void>;
   loading: boolean;
+  disabled?: boolean;
 }
 
-export function TransferForm({ onTransfer, loading }: TransferFormProps) {
+export function TransferForm({ onTransfer, loading, disabled }: TransferFormProps) {
   const [targetAddress, setTargetAddress] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -15,6 +16,8 @@ export function TransferForm({ onTransfer, loading }: TransferFormProps) {
     e.preventDefault();
     await onTransfer(targetAddress, amount);
   };
+
+  const isDisabled = disabled || loading;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -28,14 +31,15 @@ export function TransferForm({ onTransfer, loading }: TransferFormProps) {
           value={targetAddress}
           onChange={(e) => setTargetAddress(e.target.value)}
           placeholder="Enter recipient address"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           required
+          disabled={isDisabled}
         />
       </div>
 
       <div>
         <label htmlFor="amount" className="block text-sm font-medium mb-1">
-          Amount
+          Amount (USDT)
         </label>
         <input
           id="amount"
@@ -46,21 +50,22 @@ export function TransferForm({ onTransfer, loading }: TransferFormProps) {
           step="0.01"
           min="0.01"
           max="1000"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
           required
+          disabled={isDisabled}
         />
       </div>
 
       <button
         type="submit"
-        disabled={loading}
+        disabled={isDisabled}
         className={`w-full px-4 py-2 rounded-md ${
-          loading
+          isDisabled
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-green-500 hover:bg-green-600 text-white'
         }`}
       >
-        {loading ? 'Transferring...' : 'Transfer USDT'}
+        {loading ? 'Transferring...' : disabled ? 'Connect Wallet First' : 'Transfer USDT'}
       </button>
     </form>
   );

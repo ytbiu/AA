@@ -10,7 +10,26 @@ export interface BatchOperation {
   calls: Call[]
 }
 
-// 确保私钥有 0x 前缀
+// 使用钱包签名批量操作 (推荐)
+export async function signBatchOperationWithWallet(
+  signer: ethers.JsonRpcSigner,
+  batch: BatchOperation
+): Promise<string> {
+  const encoded = ethers.AbiCoder.defaultAbiCoder().encode(
+    ['tuple(address user, tuple(address to, bytes data)[] calls)'],
+    [{
+      user: batch.user,
+      calls: batch.calls.map(c => ({ to: c.to, data: c.data }))
+    }]
+  )
+
+  const hash = ethers.keccak256(encoded)
+  const signature = await signer.signMessage(ethers.getBytes(hash))
+
+  return signature
+}
+
+// 使用私钥签名批量操作 (仅测试用)
 function normalizePrivateKey(privateKey: string): string {
   if (!privateKey.startsWith('0x')) {
     return '0x' + privateKey
