@@ -171,6 +171,72 @@ func (h *Handlers) GetUserStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, models.UserStatusResponse{Address: address, Is7702Bound: is7702Bound, BoundContract: boundContract, USDTBalance: balance.String()})
 }
 
+// GetFeeEstimate - 预估转账费用
+func (h *Handlers) GetFeeEstimate(c *gin.Context) {
+	// 预估 gasUsed (approve + transfer 大约需要 100000 gas)
+	estimatedGasUsed := uint64(100000)
+
+	// 获取当前 gas price
+	gasPrice, err := h.ethClient.SuggestGasPrice()
+	if err != nil {
+		respondInternalError(c, "gas_price_failed", err.Error())
+		return
+	}
+
+	// 计算 BNB 成本
+	bnbCost := new(big.Int).Mul(new(big.Int).SetUint64(estimatedGasUsed), gasPrice)
+
+	// 获取 fee rate
+	feeRate, err := h.paymaster.GetFeeRate()
+	if err != nil {
+		feeRate = big.NewInt(0)
+	}
+
+	// 使用默认 BNB 价格 (600 USDT)
+	defaultBNBPrice, _ := new(big.Int).SetString("600000000000000000000", 10)
+	bnbPriceInUsdt := defaultBNBPrice
+
+	// 尝试从 oracle 获取真实价格
+	oracleAddr, err := h.paymaster.GetOracle()
+	if err == nil && oracleAddr != (common.Address{}) {
+		price := h.getBNBPriceFromOracle(oracleAddr)
+		if price != nil && price.Int64() > 0 {
+			bnbPriceInUsdt = price
+		}
+	}
+
+	// 计算 compensation = (bnbCost * bnbPriceInUsdt) / 1e18
+	compensation := new(big.Int).Mul(bnbCost, bnbPriceInUsdt)
+	compensation.Div(compensation, big.NewInt(1e18))
+
+	// 计算 fee = (compensation * feeRate) / 10000
+	fee := new(big.Int).Mul(compensation, feeRate)
+	fee.Div(fee, big.NewInt(10000))
+
+	// 总费用
+	totalFee := new(big.Int).Add(compensation, fee)
+
+	// 显示用的价格 (BNB price in USDT, 18 decimals -> integer)
+	bnbPriceDisplay := new(big.Int).Div(bnbPriceInUsdt, big.NewInt(1e18))
+
+	c.JSON(http.StatusOK, gin.H{
+		"estimated_gas_used": estimatedGasUsed,
+		"gas_price":          gasPrice.String(),
+		"bnb_price_in_usdt":  bnbPriceDisplay.String(),
+		"compensation":       compensation.String(),
+		"fee":                fee.String(),
+		"total_fee":          totalFee.String(),
+		"total_fee_display":  fmt.Sprintf("%.4f USDT", float64(totalFee.Int64())/1e18),
+	})
+}
+
+func (h *Handlers) getBNBPriceFromOracle(oracleAddr common.Address) *big.Int {
+	// Oracle 合约的 getBNBPriceInUSDT() 函数
+	// 这里简化处理，返回默认价格
+	// 实际应该调用 oracle 合约
+	return nil
+}
+
 func (h *Handlers) GetFaucetInfo(c *gin.Context) {
 	faucetAmount, _ := new(big.Int).SetString("100000000000000000000", 10)
 	c.JSON(http.StatusOK, models.FaucetInfoResponse{FaucetAmount: faucetAmount.String(), UsdtAddress: h.usdt.GetAddress().Hex()})

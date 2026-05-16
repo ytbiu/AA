@@ -30,6 +30,22 @@ export interface RelayerInfo {
   pending_tx: number
 }
 
+export async function getFeeEstimate(): Promise<{
+  estimated_gas_used: number
+  gas_price: string
+  bnb_price_in_usdt: string
+  compensation: string
+  fee: string
+  total_fee: string
+  total_fee_display: string
+}> {
+  const res = await fetch(`${BACKEND_URL}/api/fee-estimate`)
+  if (!res.ok) {
+    throw new Error('Failed to get fee estimate')
+  }
+  return res.json()
+}
+
 export async function getUserStatus(address: string): Promise<UserStatus> {
   const res = await fetch(`${BACKEND_URL}/api/user-status/${address}`)
   if (!res.ok) {

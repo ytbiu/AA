@@ -94,6 +94,13 @@ func (p *PaymasterContract) GetFeeRecipient() (common.Address, error) {
 	return p.contract.FeeRecipient(&bind.CallOpts{})
 }
 
+func (p *PaymasterContract) GetOracle() (common.Address, error) {
+	if p.contract == nil {
+		return common.Address{}, nil
+	}
+	return p.contract.Oracle(&bind.CallOpts{})
+}
+
 func (p *PaymasterContract) GetUSDTToken() (common.Address, error) {
 	if p.contract == nil {
 		return common.Address{}, nil
