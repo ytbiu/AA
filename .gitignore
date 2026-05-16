@@ -1,15 +1,34 @@
+# Environment files (contain private keys)
 .env
 .env.local
+backend/.env
+frontend/.env.local
+
+# Logs
 *.log
+
+# Dependencies
 node_modules/
+
+# Build outputs
 .next/
 out/
 cache/
 abi/
 bin/
-memory/
-.playwright-mcp/
+
+# Debug/test scripts (may contain private keys)
 debug*.js
 test-*.js
-*.png
+test-*.sign.js
+
+# IDE/MCP
+.playwright-mcp/
 .claude/
+
+# Memory/plans (local files)
+memory/
+docs/superpowers/
+
+# Images
+*.png

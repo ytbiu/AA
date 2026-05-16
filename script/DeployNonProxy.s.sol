@@ -10,7 +10,7 @@ import "../src/Simple7702Account.sol";
 contract DeployNonProxyScript is Script {
     function run() external {
         // 使用默认的部署者私钥（Relayer 的私钥）
-        uint256 deployerPrivateKey = 0x857973bd8b2d834a91dbcb9eebeff95d5b896afeb77e54f942a0b94b67044321;
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = 0x84D98c4faa590cD7cA746E18AcF3bcE8AD61E1b2;
 
         vm.startBroadcast(deployerPrivateKey);

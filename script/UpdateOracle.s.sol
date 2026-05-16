@@ -7,7 +7,7 @@ import "../src/USDTPaymasterNonProxy.sol";
 
 contract UpdateOracleScript is Script {
     function run() external {
-        uint256 deployerPrivateKey = 0x857973bd8b2d834a91dbcb9eebeff95d5b896afeb77e54f942a0b94b67044321;
+        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = 0x84D98c4faa590cD7cA746E18AcF3bcE8AD61E1b2;
         address paymasterAddress = 0xA61D461AF55029B58d4846C9EA818De9cBC711D3;
 
