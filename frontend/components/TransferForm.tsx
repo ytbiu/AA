@@ -6,9 +6,17 @@ interface TransferFormProps {
   onTransfer: (to: string, amount: string) => Promise<void>;
   loading: boolean;
   disabled?: boolean;
+  submitLabel?: string;
+  loadingLabel?: string;
 }
 
-export function TransferForm({ onTransfer, loading, disabled }: TransferFormProps) {
+export function TransferForm({
+  onTransfer,
+  loading,
+  disabled,
+  submitLabel = 'Transfer USDT',
+  loadingLabel = 'Processing...',
+}: TransferFormProps) {
   const [targetAddress, setTargetAddress] = useState('');
   const [amount, setAmount] = useState('');
 
@@ -65,7 +73,7 @@ export function TransferForm({ onTransfer, loading, disabled }: TransferFormProp
             : 'bg-green-500 hover:bg-green-600 text-white'
         }`}
       >
-        {loading ? 'Transferring...' : disabled ? 'Connect Wallet First' : 'Transfer USDT'}
+        {loading ? loadingLabel : disabled ? 'Connect Wallet First' : submitLabel}
       </button>
     </form>
   );

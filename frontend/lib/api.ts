@@ -23,6 +23,19 @@ export interface TransferUSDTResponse {
   status: string
   compensation: string
   gas_used: number
+  calldata_hash: string
+}
+
+export interface TransferUSDTQuoteResponse {
+  relayer_address: string
+  gas_estimate: number
+  gas_price: string
+  bnb_price_in_usdt: string
+  fee_rate: number
+  estimated_gas_cost: string
+  estimated_paymaster_fee: string
+  estimated_total_gas_cost: string
+  calldata_hash: string
 }
 
 export interface RelayerInfo {
@@ -106,9 +119,33 @@ export async function transferUSDT(
   userAddress: string,
   targetAddress: string,
   amount: string,
-  signature: string
+  signature: string,
+  quotedRelayerAddress?: string
 ): Promise<TransferUSDTResponse> {
   const res = await fetch(`${BACKEND_URL}/api/transfer-usdt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_address: userAddress,
+      target_address: targetAddress,
+      amount: amount,
+      signature: signature,
+      quoted_relayer_address: quotedRelayerAddress ?? '',
+    }),
+  })
+  if (!res.ok) {
+    throw new Error('Failed to transfer USDT')
+  }
+  return res.json()
+}
+
+export async function quoteTransferUSDT(
+  userAddress: string,
+  targetAddress: string,
+  amount: string,
+  signature: string
+): Promise<TransferUSDTQuoteResponse> {
+  const res = await fetch(`${BACKEND_URL}/api/transfer-usdt/quote`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -119,7 +156,7 @@ export async function transferUSDT(
     }),
   })
   if (!res.ok) {
-    throw new Error('Failed to transfer USDT')
+    throw new Error('Failed to estimate transfer gas')
   }
   return res.json()
 }

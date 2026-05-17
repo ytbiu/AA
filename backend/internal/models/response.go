@@ -16,6 +16,19 @@ type TransferUSDTResponse struct {
 	Status       string `json:"status"`
 	Compensation string `json:"compensation"`
 	GasUsed      uint64 `json:"gas_used"`
+	CalldataHash string `json:"calldata_hash"`
+}
+
+type TransferUSDTQuoteResponse struct {
+	RelayerAddress        string `json:"relayer_address"`
+	GasEstimate           uint64 `json:"gas_estimate"`
+	GasPrice              string `json:"gas_price"`
+	BNBPriceInUSDT        string `json:"bnb_price_in_usdt"`
+	FeeRate               uint64 `json:"fee_rate"`
+	EstimatedGasCost      string `json:"estimated_gas_cost"`
+	EstimatedPaymasterFee string `json:"estimated_paymaster_fee"`
+	EstimatedTotalGasCost string `json:"estimated_total_gas_cost"`
+	CalldataHash          string `json:"calldata_hash"`
 }
 
 type UserStatusResponse struct {

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -233,56 +234,13 @@ func (h *Handlers) TransferUSDT(c *gin.Context) {
 
 	log.Printf("[TransferUSDT] Request: user=%s, target=%s, amount=%s", req.UserAddress, req.TargetAddress, req.Amount)
 
-	userAddr := common.HexToAddress(req.UserAddress)
-	targetAddr := common.HexToAddress(req.TargetAddress)
-
-	amount := new(big.Int)
-	if _, ok := amount.SetString(req.Amount, 10); !ok {
-		respondBadRequest(c, fmt.Errorf("amount must be a valid integer"))
-		return
-	}
-
-	sigHex := req.Signature
-	if strings.HasPrefix(sigHex, "0x") {
-		sigHex = sigHex[2:]
-	}
-	signature := common.Hex2Bytes(sigHex)
-	if len(signature) != 65 {
-		respondBadRequest(c, fmt.Errorf("signature must be 65 bytes"))
-		return
-	}
-
-	buffer, _ := new(big.Int).SetString("1000000000000000000", 10)
-	approveAmount := new(big.Int).Add(amount, buffer)
-	approveData, err := getApproveData(h.paymaster.GetAddress(), approveAmount)
+	payload, err := h.buildTransferPayload(req)
 	if err != nil {
-		respondInternalError(c, "encode_failed", err.Error())
+		respondBadRequest(c, err)
 		return
 	}
 
-	transferData, err := getTransferData(targetAddr, amount)
-	if err != nil {
-		respondInternalError(c, "encode_failed", err.Error())
-		return
-	}
-
-	userOp := contract.IUSDTPaymasterUserOperation{
-		User: userAddr,
-		Calls: []contract.IUSDTPaymasterCall{
-			{To: h.usdt.GetAddress(), Data: approveData},
-			{To: h.usdt.GetAddress(), Data: transferData},
-		},
-	}
-
-	packed := packUserOperation(userOp)
-	userOpHash := crypto.Keccak256Hash(packed)
-
-	signer, err := recoverSigner(userOpHash, signature)
-	if err != nil {
-		log.Printf("[TransferUSDT] Signature recovery error: %v", err)
-	} else {
-		log.Printf("[TransferUSDT] Recovered signer: %s, expected user: %s", signer.Hex(), userAddr.Hex())
-	}
+	log.Printf("[TransferUSDT] Recovered signer: %s, expected user: %s", payload.signer.Hex(), payload.userAddr.Hex())
 
 	relayer, err := h.relayerPool.SelectIdle()
 	if err != nil {
@@ -299,7 +257,7 @@ func (h *Handlers) TransferUSDT(c *gin.Context) {
 		return
 	}
 
-	tx, err := h.paymaster.ExecuteBatchWithTransactor(transactor, userOp, signature)
+	tx, err := h.paymaster.ExecuteBatchWithTransactor(transactor, payload.userOp, payload.signature)
 	if err != nil {
 		h.relayerPool.MarkComplete(relayer.Address)
 		respondInternalError(c, "execute_batch_failed", err.Error())
@@ -308,7 +266,13 @@ func (h *Handlers) TransferUSDT(c *gin.Context) {
 
 	receipt, err := h.waitForTx(tx, 30*time.Second)
 	if err != nil {
-		c.JSON(http.StatusOK, models.TransferUSDTResponse{TxHash: tx.Hash().Hex(), Status: "pending", Compensation: "0", GasUsed: 0})
+		c.JSON(http.StatusOK, models.TransferUSDTResponse{
+			TxHash:       tx.Hash().Hex(),
+			Status:       "pending",
+			Compensation: "0",
+			GasUsed:      0,
+			CalldataHash: payload.calldataHash.Hex(),
+		})
 		return
 	}
 
@@ -334,5 +298,214 @@ func (h *Handlers) TransferUSDT(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, models.TransferUSDTResponse{TxHash: tx.Hash().Hex(), Status: status, Compensation: compensation, GasUsed: gasUsed})
+	c.JSON(http.StatusOK, models.TransferUSDTResponse{
+		TxHash:       tx.Hash().Hex(),
+		Status:       status,
+		Compensation: compensation,
+		GasUsed:      gasUsed,
+		CalldataHash: payload.calldataHash.Hex(),
+	})
+}
+
+func (h *Handlers) QuoteTransferUSDT(c *gin.Context) {
+	var req models.TransferUSDTRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondBadRequest(c, err)
+		return
+	}
+
+	payload, err := h.buildTransferPayload(req)
+	if err != nil {
+		respondBadRequest(c, err)
+		return
+	}
+
+	relayer, err := h.relayerPool.SelectIdle()
+	if err != nil {
+		respondInternalError(c, "no_relayer", "no available relayer")
+		return
+	}
+
+	gasEstimate, err := h.estimatePaymasterExecutionGas(payload.userOp, payload.signature, relayer.Address)
+	if err != nil {
+		respondInternalError(c, "estimate_failed", err.Error())
+		return
+	}
+
+	gasPrice, err := h.ethClient.SuggestGasPrice()
+	if err != nil {
+		respondInternalError(c, "gas_price_failed", err.Error())
+		return
+	}
+
+	estimatedGasCost, estimatedFee, estimatedTotalGasCost, feeRate, bnbPriceInUSDT, err := h.calculateGasQuote(gasEstimate, gasPrice)
+	if err != nil {
+		respondInternalError(c, "quote_calculation_failed", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, models.TransferUSDTQuoteResponse{
+		RelayerAddress:        relayer.Address.Hex(),
+		GasEstimate:           gasEstimate,
+		GasPrice:              gasPrice.String(),
+		BNBPriceInUSDT:        bnbPriceInUSDT.String(),
+		FeeRate:               feeRate,
+		EstimatedGasCost:      estimatedGasCost.String(),
+		EstimatedPaymasterFee: estimatedFee.String(),
+		EstimatedTotalGasCost: estimatedTotalGasCost.String(),
+		CalldataHash:          payload.calldataHash.Hex(),
+	})
+}
+
+type transferPayload struct {
+	userAddr     common.Address
+	signature    []byte
+	userOp       contract.IUSDTPaymasterUserOperation
+	signer       common.Address
+	calldataHash common.Hash
+}
+
+func (h *Handlers) buildTransferPayload(req models.TransferUSDTRequest) (*transferPayload, error) {
+	userAddr := common.HexToAddress(req.UserAddress)
+	targetAddr := common.HexToAddress(req.TargetAddress)
+
+	amount := new(big.Int)
+	if _, ok := amount.SetString(req.Amount, 10); !ok {
+		return nil, fmt.Errorf("amount must be a valid integer")
+	}
+
+	sigHex := req.Signature
+	if strings.HasPrefix(sigHex, "0x") {
+		sigHex = sigHex[2:]
+	}
+	signature := common.Hex2Bytes(sigHex)
+	if len(signature) != 65 {
+		return nil, fmt.Errorf("signature must be 65 bytes")
+	}
+
+	buffer, _ := new(big.Int).SetString("1000000000000000000", 10)
+	approveAmount := new(big.Int).Add(amount, buffer)
+	approveData, err := getApproveData(h.paymaster.GetAddress(), approveAmount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode approve: %w", err)
+	}
+
+	transferData, err := getTransferData(targetAddr, amount)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode transfer: %w", err)
+	}
+
+	userOp := contract.IUSDTPaymasterUserOperation{
+		User: userAddr,
+		Calls: []contract.IUSDTPaymasterCall{
+			{To: h.usdt.GetAddress(), Data: approveData},
+			{To: h.usdt.GetAddress(), Data: transferData},
+		},
+	}
+
+	packed := packUserOperation(userOp)
+	userOpHash := crypto.Keccak256Hash(packed)
+	signer, err := recoverSigner(userOpHash, signature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to recover signer: %w", err)
+	}
+	if signer != userAddr {
+		return nil, fmt.Errorf("signature signer does not match user address")
+	}
+
+	executeData, err := packPaymasterExecuteBatchCalldata(userOp, signature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode executeBatch calldata: %w", err)
+	}
+
+	return &transferPayload{
+		userAddr:     userAddr,
+		signature:    signature,
+		userOp:       userOp,
+		signer:       signer,
+		calldataHash: crypto.Keccak256Hash(executeData),
+	}, nil
+}
+
+func (h *Handlers) estimatePaymasterExecutionGas(
+	userOp contract.IUSDTPaymasterUserOperation,
+	signature []byte,
+	relayerAddr common.Address,
+) (uint64, error) {
+	executeData, err := packPaymasterExecuteBatchCalldata(userOp, signature)
+	if err != nil {
+		return 0, fmt.Errorf("failed to pack paymaster executeBatch call: %v", err)
+	}
+
+	paymasterAddr := h.paymaster.GetAddress()
+	msg := ethereum.CallMsg{
+		From: relayerAddr,
+		To:   &paymasterAddr,
+		Data: executeData,
+	}
+
+	gasEstimate, err := h.ethClient.GetEthClient().EstimateGas(context.Background(), msg)
+	if err != nil {
+		return 0, fmt.Errorf("failed to estimate paymaster execution gas: %v", err)
+	}
+
+	return gasEstimate, nil
+}
+
+func (h *Handlers) calculateGasQuote(gasEstimate uint64, gasPrice *big.Int) (*big.Int, *big.Int, *big.Int, uint64, *big.Int, error) {
+	oracleAddr, err := h.paymaster.GetOracle()
+	if err != nil {
+		return nil, nil, nil, 0, nil, fmt.Errorf("failed to get oracle: %v", err)
+	}
+	if oracleAddr == (common.Address{}) {
+		return nil, nil, nil, 0, nil, fmt.Errorf("oracle address not configured")
+	}
+
+	oracle := contract.NewOracle(oracleAddr.Hex(), h.ethClient.GetEthClient())
+	bnbPriceInUSDT, err := oracle.GetBNBPriceInUSDT(&bind.CallOpts{})
+	if err != nil {
+		return nil, nil, nil, 0, nil, fmt.Errorf("failed to get BNB/USDT price: %v", err)
+	}
+
+	feeRateBig, err := h.paymaster.GetFeeRate()
+	if err != nil {
+		return nil, nil, nil, 0, nil, fmt.Errorf("failed to get fee rate: %v", err)
+	}
+
+	gasUsed := new(big.Int).SetUint64(gasEstimate)
+	bnbCost := new(big.Int).Mul(gasUsed, gasPrice)
+	estimatedGasCost := new(big.Int).Mul(bnbCost, bnbPriceInUSDT)
+	estimatedGasCost.Div(estimatedGasCost, big.NewInt(1e18))
+
+	estimatedFee := new(big.Int).Mul(estimatedGasCost, feeRateBig)
+	estimatedFee.Div(estimatedFee, big.NewInt(10000))
+
+	estimatedTotalGasCost := new(big.Int).Add(estimatedGasCost, estimatedFee)
+
+	return estimatedGasCost, estimatedFee, estimatedTotalGasCost, feeRateBig.Uint64(), bnbPriceInUSDT, nil
+}
+
+func (h *Handlers) selectRelayerForTransfer(quotedRelayerAddress string) (*relayer.Relayer, error) {
+	if quotedRelayerAddress == "" {
+		return h.relayerPool.SelectIdle()
+	}
+
+	quotedRelayer := h.relayerPool.GetByAddress(common.HexToAddress(quotedRelayerAddress))
+	if quotedRelayer == nil {
+		return nil, fmt.Errorf("quoted relayer not available")
+	}
+
+	return quotedRelayer, nil
+}
+
+func packPaymasterExecuteBatchCalldata(
+	userOp contract.IUSDTPaymasterUserOperation,
+	signature []byte,
+) ([]byte, error) {
+	parsedABI, err := abi.JSON(strings.NewReader(contract.USDTPaymasterABI))
+	if err != nil {
+		return nil, err
+	}
+
+	return parsedABI.Pack("executeBatch", userOp, signature)
 }

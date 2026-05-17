@@ -2,11 +2,15 @@ package contract
 
 import (
 	"math/big"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+const priceOracleABI = `[{"inputs":[],"name":"getBNBPriceInUSDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"router","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"}]`
 
 type OracleContract struct {
 	address common.Address
@@ -24,10 +28,18 @@ func (o *OracleContract) GetAddress() common.Address {
 	return o.address
 }
 
-func (o *OracleContract) GetBNBPrice(caller *bind.CallOpts) (*big.Int, error) {
-	return big.NewInt(300000000000), nil // $300 * 10^9
-}
+func (o *OracleContract) GetBNBPriceInUSDT(caller *bind.CallOpts) (*big.Int, error) {
+	parsedABI, err := abi.JSON(strings.NewReader(priceOracleABI))
+	if err != nil {
+		return nil, err
+	}
 
-func (o *OracleContract) GetUSDTPrice(caller *bind.CallOpts) (*big.Int, error) {
-	return big.NewInt(100000000000), nil // $1 * 10^9
+	bound := bind.NewBoundContract(o.address, parsedABI, o.client, nil, nil)
+	var out []interface{}
+	if err := bound.Call(caller, &out, "getBNBPriceInUSDT"); err != nil {
+		return nil, err
+	}
+
+	price := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+	return price, nil
 }

@@ -35,10 +35,11 @@ type Clear7702Request struct {
 }
 
 type TransferUSDTRequest struct {
-	UserAddress   string `json:"user_address" binding:"required"`
-	TargetAddress string `json:"target_address" binding:"required"`
-	Amount        string `json:"amount" binding:"required"`
-	Signature     string `json:"signature" binding:"required"`
+	UserAddress          string `json:"user_address" binding:"required"`
+	TargetAddress        string `json:"target_address" binding:"required"`
+	Amount               string `json:"amount" binding:"required"`
+	Signature            string `json:"signature" binding:"required"`
+	QuotedRelayerAddress string `json:"quoted_relayer_address"`
 	// EIP-7702 authorization (可选，用户已授权则不需要)
 	AuthChainID uint64 `json:"auth_chain_id"`
 	AuthNonce   uint64 `json:"auth_nonce"`

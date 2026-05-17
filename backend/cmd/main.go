@@ -58,6 +58,7 @@ func main() {
 	r.POST("/api/faucet/:address", handlers.ClaimFaucet)
 	r.POST("/api/authorize-7702", handlers.Authorize7702)
 	r.POST("/api/clear-7702", handlers.Clear7702)
+	r.POST("/api/transfer-usdt/quote", handlers.QuoteTransferUSDT)
 	r.POST("/api/transfer-usdt", handlers.TransferUSDT)
 
 	r.GET("/api/admin/relayers", handlers.GetRelayers)

@@ -63,6 +63,17 @@ func (p *Pool) GetCount() int {
 	return len(p.relayers)
 }
 
+func (p *Pool) GetByAddress(address common.Address) *Relayer {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	for _, r := range p.relayers {
+		if r.Address == address {
+			return r
+		}
+	}
+	return nil
+}
+
 func (p *Pool) MarkPending(address common.Address) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
